@@ -21,38 +21,29 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationClient;
     private GoogleApiAvailability googleApiAvailability;
+    private Location lastLocation;
+    private boolean hasLocationPermission = false;
 
-    private static final int API_AVAILIBILITY_REQUEST = 1;
+    private static final int API_AVAILABILITY_REQUEST = 1;
     private static final int LOCATION_PERMISSION_REQUEST = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-
-        //Make sure Google Play services is installed, enabled, and up to date
-        googleApiAvailability = GoogleApiAvailability.getInstance();
-        int apiAvailability = googleApiAvailability.isGooglePlayServicesAvailable(this);
-        if (apiAvailability != ConnectionResult.SUCCESS)
-            googleApiAvailability.getErrorDialog(this,apiAvailability,API_AVAILIBILITY_REQUEST).show();
-
-        //If play services is available check permissions
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED)
-        {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST);
-        }
 
         //Obtain FusedLocationProviderClient
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -65,27 +56,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
+    public void onResume(){
+        super.onResume();
+        //Make sure Google Play services is installed, enabled, and up to date
+        googleApiAvailability = GoogleApiAvailability.getInstance();
+        int apiAvailability = googleApiAvailability.isGooglePlayServicesAvailable(this);
+        if (apiAvailability != ConnectionResult.SUCCESS)
+            googleApiAvailability.getErrorDialog(this,apiAvailability,API_AVAILABILITY_REQUEST).show();
+
+        //If play services is available check permissions
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED)
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST);
+        else
+            hasLocationPermission = true;
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode,
-                                           String[] permissions, int[] grantResults) {
-        switch (requestCode) {
-            case LOCATION_PERMISSION_REQUEST: {
+                                           String[] permissions, int[] grantResults)
+    {
+        switch (requestCode)
+        {
+            case LOCATION_PERMISSION_REQUEST:
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // permission was granted, yay! Do the
-                    // contacts-related task you need to do.
-                } else {
-                    AlertDialog alert = new AlertDialog.Builder(this).
-                            setMessage("Location permission is required for finding nearby gas stations").setCancelable(false)
-                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int id) {
-                                    dialog.cancel();
-                                }
-                            }).show();
+                    hasLocationPermission = true;
                 }
-                return;
-            }
-
+                else
+                {
+                    hasLocationPermission = false;
+//                    AlertDialog alert = new AlertDialog.Builder(this).
+//                            setMessage("Location permission is required for finding nearby gas stations").setCancelable(false)
+//                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+//                                public void onClick(DialogInterface dialog, int id) {
+//                                    dialog.cancel();
+//                                }
+//                            }).show();
+                }
+                updateLocation();
+                break;
             // other 'case' lines to check for other
             // permissions this app might request.
         }
@@ -104,26 +116,63 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        Log.d("LOCATION","MAP MAP MAP");
-        fusedLocationClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
-            @Override
-            public void onSuccess(Location location) {
-                Log.d("LOCATION","Location success");
-                if (location != null)
-                {
-                    Log.d("LOCATION","Location found");
-                    // Add a marker in Sydney and move the camera
-                    LatLng myLoc = new LatLng(location.getLatitude(), location.getLongitude());
-                    mMap.addMarker(new MarkerOptions().position(myLoc).title("You"));
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLoc,15));
+        mMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener() {
 
-                }
-            }
-        }).addOnFailureListener(this, new OnFailureListener() {
             @Override
-            public void onFailure(@NonNull Exception e) {
-                Log.e("LOCATION", e.getMessage());
+            public boolean onMyLocationButtonClick() {
+                updateLocation();
+                return true;
             }
         });
+
+        updateLocationUI();
+
+        updateLocation();
+    }
+
+    private void updateLocationUI()
+    {
+        if (mMap == null) {
+            return;
+        }
+        try {
+            if (hasLocationPermission) {
+                mMap.setMyLocationEnabled(true);
+                mMap.getUiSettings().setMyLocationButtonEnabled(true);
+            } else {
+                mMap.setMyLocationEnabled(false);
+                mMap.getUiSettings().setMyLocationButtonEnabled(false);
+                lastLocation = null;
+            }
+        } catch (SecurityException e)  {
+            Log.e("LOCATION", e.getMessage());
+        }
+    }
+
+    private void updateLocation()
+    {
+        try {
+            if (hasLocationPermission) {
+                fusedLocationClient.getLastLocation().addOnCompleteListener(this, new OnCompleteListener<Location>() {
+                    @Override
+                    public void onComplete(@NonNull Task task) {
+                        if (task.isSuccessful())
+                        {
+                            lastLocation = (Location) task.getResult();
+                            LatLng myLoc = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
+                            CameraPosition myPosition = new CameraPosition.Builder().target(myLoc).zoom(12).build();
+                            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(myPosition));
+                        }
+                        else
+                        {
+                            Log.e("LOCATION", "Current location is null");
+                            Log.e("LOCATION", task.getException().getMessage());
+                        }
+                    }
+                });
+            }
+        } catch (SecurityException e)  {
+            Log.e("LOCATION", e.getMessage());
+        }
     }
 }
