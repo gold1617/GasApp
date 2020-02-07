@@ -29,13 +29,20 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.concurrent.ExecutionException;
+
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback{
 
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationClient;
     private GoogleApiAvailability googleApiAvailability;
     private Location lastLocation;
     private boolean hasLocationPermission = false;
+    public JSONArray stationList;
 
     private static final int API_AVAILABILITY_REQUEST = 1;
     private static final int LOCATION_PERMISSION_REQUEST = 2;
@@ -53,6 +60,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
 
         mapFragment.getMapAsync(this);
+
+        WebRequestCallback stationsCallback = new WebRequestCallback() {
+            @Override
+            public void callBack(JSONObject response) {
+                if (response != null)
+                {
+                    try {
+                        stationList = response.getJSONArray("stations");
+                    } catch (JSONException e) {
+                        Log.e("NETWORK","Error in stationList Callback" + e.getMessage());
+                        e.printStackTrace();
+                    }
+                }
+                else
+                    stationList = null;
+
+            }
+        };
+
+        StationRetriever retriever = new StationRetriever(stationsCallback);
+        retriever.execute(new Object[]{getString(R.string.stations_url),getString(R.string.X_API_KEY)});
     }
 
     @Override
