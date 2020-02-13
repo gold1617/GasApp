@@ -19,22 +19,22 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
 
-public class URLHelper  {
+public class URLHelper
+{
 
     private static CookieStore cookieStore;
     private static HttpContext localContext;
 
-    public  static JSONObject myAPIGet(String url, String AuthKey)
+    public static JSONObject myAPIGet(String url, String AuthKey)
     {
         JSONObject JSONResponse = null;
 
-        if(cookieStore == null || localContext == null)
+        if (cookieStore == null || localContext == null)
         {
             cookieStore = new BasicCookieStore();
             localContext = new BasicHttpContext();
-            localContext.setAttribute(ClientContext.COOKIE_STORE,cookieStore);
+            localContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
         }
-
 
 
         HttpClient client = new DefaultHttpClient();
@@ -44,28 +44,73 @@ public class URLHelper  {
             httpGet.addHeader("X-Api-Key", AuthKey);
 
 
-            HttpResponse response = client.execute(httpGet,localContext);
+            HttpResponse response = client.execute(httpGet, localContext);
             int status = response.getStatusLine().getStatusCode();
-            Log.d("NETWORK",response.getStatusLine().getReasonPhrase());
-            Log.d("NETWORK",String.valueOf(status));
+            Log.d("NETWORK", response.getStatusLine().getReasonPhrase());
+            Log.d("NETWORK", String.valueOf(status));
             final String responseBody = EntityUtils.toString(response.getEntity());
             JSONResponse = new JSONObject(responseBody);
         }
         catch (UnsupportedEncodingException e)
         {
-            Log.e("AUTH", "Error sending to server", e);
+            Log.e("NETWORK", "Error sending to server", e);
         }
         catch (IOException e)
         {
-            Log.e("AUTH", "Error sending to server", e);
+            Log.e("NETWORK", "Error sending to server", e);
         }
         catch (JSONException e)
         {
-            Log.e("AUTH", "Error sending to server", e);
+            Log.e("NETWORK", "Error sending to server", e);
         }
         catch (Exception e)
         {
-            Log.e("AUTH", "Error sending to server", e);
+            Log.e("NETWORK", "Error sending to server", e);
+        }
+        finally
+        {
+            return JSONResponse;
+        }
+    }
+
+    public static JSONObject simpleGet(String url)
+    {
+        JSONObject JSONResponse = null;
+
+        if (cookieStore == null || localContext == null)
+        {
+            cookieStore = new BasicCookieStore();
+            localContext = new BasicHttpContext();
+            localContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
+        }
+
+
+        HttpClient client = new DefaultHttpClient();
+        HttpGet httpGet = new HttpGet(url);
+        try
+        {
+            HttpResponse response = client.execute(httpGet, localContext);
+            int status = response.getStatusLine().getStatusCode();
+            Log.d("NETWORK", response.getStatusLine().getReasonPhrase());
+            Log.d("NETWORK", String.valueOf(status));
+            final String responseBody = EntityUtils.toString(response.getEntity());
+            JSONResponse = new JSONObject(responseBody);
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            Log.e("NETWORK", "Error sending to server", e);
+        }
+        catch (IOException e)
+        {
+            Log.e("NETWORK", "Error sending to server", e);
+        }
+        catch (JSONException e)
+        {
+            Log.e("NETWORK", "Error sending to server", e);
+        }
+        catch (Exception e)
+        {
+            Log.e("NETWORK", "Error sending to server", e);
         }
         finally
         {
