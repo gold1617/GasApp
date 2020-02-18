@@ -22,12 +22,15 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.Iterator;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 {
@@ -94,7 +97,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void callBack(JSONObject response)
             {
                 if (response != null)
-                    Log.d("Stations", response.toString());
+                {
+                    mMap.clear();
+                    Iterator<String> iter = response.keys();
+                    String key,name;
+                    JSONArray jsonArray;
+                    JSONObject jsonObject;
+                    LatLng loc;
+
+                    while (iter.hasNext())
+                    {
+                        key = iter.next();
+
+                        Log.d("Stations", "key="+key+", data=" + response.optJSONArray(key));
+
+                        jsonArray = response.optJSONArray(key);
+
+                        if (jsonArray != null)
+                        {
+                            for (int i = 0; i < jsonArray.length(); i++)
+                            {
+                                jsonObject = jsonArray.optJSONObject(i);
+                                name = jsonObject.optString("name", "");
+                                loc = new LatLng(jsonObject.optJSONObject("location").optDouble("lat"),
+                                        jsonObject.optJSONObject("location").optDouble("lng"));
+
+                                //TODO: Improve search accuracy
+                                //TODO: Add to list and detect duplicates
+                                mMap.addMarker(new MarkerOptions().position(loc).title(name));
+                            }
+                        }
+                    }
+
+                }
             }
         };
     }
@@ -218,7 +253,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             LatLng myLoc = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
                             CameraPosition myPosition = new CameraPosition.Builder().target(myLoc).zoom(12).build();
                             mMap.animateCamera(CameraUpdateFactory.newCameraPosition(myPosition));
-                            //TODO: figure out map pins
 
                             Log.d("Stations","Location updated");
                             if (stationList != null)
