@@ -2,6 +2,8 @@ package com.example.gasapp;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -30,7 +32,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 {
@@ -43,6 +48,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private JSONArray stationList;
     private WebRequestCallback stationLocationCallback;
     private StationLocator stationLocator;
+    private ArrayList<GasStation> gasStations;
+    private Geocoder geocoder;
 
     private static final int API_AVAILABILITY_REQUEST = 1;
     private static final int LOCATION_PERMISSION_REQUEST = 2;
@@ -56,6 +63,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         //Obtain FusedLocationProviderClient
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        gasStations = new ArrayList<GasStation>();
+        geocoder = new Geocoder(this, Locale.getDefault());
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -99,8 +108,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (response != null)
                 {
                     mMap.clear();
+                    gasStations.clear();
+
                     Iterator<String> iter = response.keys();
-                    String key,name;
+                    String key,name,searchName,address;
                     JSONArray jsonArray;
                     JSONObject jsonObject;
                     LatLng loc;
@@ -108,6 +119,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     while (iter.hasNext())
                     {
                         key = iter.next();
+                        searchName = key.toLowerCase().contains("costco") ? "costco" : key.toLowerCase();
 
                         Log.d("Stations", "key="+key+", data=" + response.optJSONArray(key));
 
@@ -119,19 +131,63 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             {
                                 jsonObject = jsonArray.optJSONObject(i);
                                 name = jsonObject.optString("name", "");
-                                loc = new LatLng(jsonObject.optJSONObject("location").optDouble("lat"),
-                                        jsonObject.optJSONObject("location").optDouble("lng"));
 
-                                //TODO: Improve search accuracy
-                                //TODO: Add to list and detect duplicates
-                                mMap.addMarker(new MarkerOptions().position(loc).title(name));
+                                //Filter closely named location returned by FourSquare Api
+                                if (name.toLowerCase().contains(searchName))
+                                {
+                                    jsonObject = jsonObject.optJSONObject("location");
+
+                                    loc = getImprovedLatLng(jsonObject);
+
+                                    if(!isDuplicate(loc))
+                                    {
+                                        GasStation station = new GasStation(name,loc,lastLocation);
+                                        gasStations.add(station);
+                                        mMap.addMarker(new MarkerOptions().position(loc).title(name));
+                                    }
+                                }
                             }
                         }
                     }
-
                 }
             }
         };
+    }
+
+    private LatLng getImprovedLatLng(JSONObject jsonObject)
+    {
+        if(jsonObject.optString("address") != "")
+        {
+            String address = jsonObject.optString("address") + "," + jsonObject.optString("city") + ","
+                    + jsonObject.optString("state") + " " + jsonObject.optString("postalCode");
+
+            try
+            {
+                List<Address> addresses = geocoder.getFromLocationName(address,1);
+
+                if (addresses != null && !addresses.isEmpty())
+                    return new LatLng(addresses.get(0).getLatitude(),addresses.get(0).getLongitude());
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+
+        }
+
+        return new LatLng(jsonObject.optDouble("lat"), jsonObject.optDouble("lng"));
+    }
+
+    private boolean isDuplicate(LatLng loc)
+    {
+        for (GasStation g: gasStations)
+        {
+            if(loc.equals(g.getLocation()))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -250,6 +306,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         if (task.isSuccessful())
                         {
                             lastLocation = (Location) task.getResult();
+                            if(lastLocation == null)
+                                return;
+
                             LatLng myLoc = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
                             CameraPosition myPosition = new CameraPosition.Builder().target(myLoc).zoom(12).build();
                             mMap.animateCamera(CameraUpdateFactory.newCameraPosition(myPosition));
