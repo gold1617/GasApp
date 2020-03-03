@@ -32,6 +32,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -50,10 +51,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private StationLocator stationLocator;
     private ArrayList<GasStation> gasStations;
     private Geocoder geocoder;
+    private List<StationLocator> stationLocatorList;
 
     private static final int API_AVAILABILITY_REQUEST = 1;
     private static final int LOCATION_PERMISSION_REQUEST = 2;
 
+    //TODO: Change look of location and maps/navigate buttons
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -107,44 +110,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             {
                 if (response != null)
                 {
-                    mMap.clear();
-                    gasStations.clear();
-
                     Iterator<String> iter = response.keys();
-                    String key,name,searchName,address;
+                    String key,name,searchName;
                     JSONArray jsonArray;
                     JSONObject jsonObject;
                     LatLng loc;
 
-                    while (iter.hasNext())
+                    key = iter.next();
+                    searchName = key.toLowerCase().contains("costco") ? "costco" : key.toLowerCase();
+                    jsonArray = response.optJSONArray(key);
+
+                    if (jsonArray != null)
                     {
-                        key = iter.next();
-                        searchName = key.toLowerCase().contains("costco") ? "costco" : key.toLowerCase();
-
-                        Log.d("Stations", "key="+key+", data=" + response.optJSONArray(key));
-
-                        jsonArray = response.optJSONArray(key);
-
-                        if (jsonArray != null)
+                        for (int i = 0; i < jsonArray.length(); i++)
                         {
-                            for (int i = 0; i < jsonArray.length(); i++)
+                            jsonObject = jsonArray.optJSONObject(i);
+                            name = jsonObject.optString("name", "");
+
+                            //Filter closely named location returned by FourSquare Api
+                            if (name.toLowerCase().contains(searchName))
                             {
-                                jsonObject = jsonArray.optJSONObject(i);
-                                name = jsonObject.optString("name", "");
+                                jsonObject = jsonObject.optJSONObject("location");
 
-                                //Filter closely named location returned by FourSquare Api
-                                if (name.toLowerCase().contains(searchName))
+                                loc = getImprovedLatLng(jsonObject);
+
+                                if(!isDuplicate(loc))
                                 {
-                                    jsonObject = jsonObject.optJSONObject("location");
+                                    GasStation station = new GasStation(name,loc,lastLocation);
+                                    gasStations.add(station);
 
-                                    loc = getImprovedLatLng(jsonObject);
-
-                                    if(!isDuplicate(loc))
-                                    {
-                                        GasStation station = new GasStation(name,loc,lastLocation);
-                                        gasStations.add(station);
-                                        mMap.addMarker(new MarkerOptions().position(loc).title(name));
-                                    }
+                                    //TODO: Add List View
+                                    mMap.addMarker(new MarkerOptions().position(loc).title(name));
                                 }
                             }
                         }
@@ -170,7 +166,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
             catch (Exception e)
             {
-                e.printStackTrace();
+                Log.e("ImproveLocation",e.getStackTrace().toString());
             }
 
         }
@@ -261,6 +257,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
+        mMap.setInfoWindowAdapter(new StationInfoWindowAdapter(getLayoutInflater()));
+
         updateLocationUI();
 
         updateLocation();
@@ -336,19 +334,51 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void locateNearbyStations()
     {
+        String country = "";
         if(lastLocation == null)
             return;
 
-        if (stationLocator != null && stationLocator.getStatus() != AsyncTask.Status.FINISHED)
-            stationLocator.cancel(true);
+        mMap.clear();
+        gasStations.clear();
 
-        stationLocator = new StationLocator(stationLocationCallback,this);
+        try
+        {
+            List<Address> addresses  = geocoder.getFromLocation(lastLocation.getLatitude(),lastLocation.getLongitude(),1);
+            if (addresses != null && !addresses.isEmpty())
+            {
+                Address tempAddress = addresses.get(0);
+                country = tempAddress.getCountryName();
+            }
+
+        }
+        catch (IOException e)
+        {
+            country = this.getResources().getConfiguration().locale.getDisplayCountry();
+        }
+
+
+        if(country.equalsIgnoreCase("United States"))
+            country = "USA";
 
         String urlString = String.format(getString(R.string.nearby_url), lastLocation.getLatitude(),
                 lastLocation.getLongitude(),
                 getString(R.string.foursquare_client_id),
                 getString(R.string.foursquare_client_secret));
-        stationLocator.execute(urlString,stationList,lastLocation);
+
+        JSONObject station = null;
+        for(int i =0;i < stationList.length();i++)
+        {
+            station = stationList.optJSONObject(i);
+
+            if (country.equalsIgnoreCase(station.optString("location")))
+            {
+                String request = urlString + station.optString("name").replace(" ", "%20");
+
+                stationLocator = new StationLocator(stationLocationCallback);
+
+                stationLocator.execute(request,station.optString("name"));
+            }
+        }
 
     }
 }
