@@ -1,19 +1,11 @@
 package com.example.gasapp;
 
-import android.content.Context;
-import android.location.Address;
-import android.location.Geocoder;
-import android.location.Location;
 import android.os.AsyncTask;
 import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Locale;
 
 public class StationLocator extends AsyncTask<Object, Void, JSONObject>
 {
@@ -57,7 +49,7 @@ public class StationLocator extends AsyncTask<Object, Void, JSONObject>
     @Override
     protected void onPostExecute(JSONObject jsonObject)
     {
-        if (delegate != null)
+        if (delegate != null && !isCancelled())
             delegate.callBack(jsonObject);
     }
 }

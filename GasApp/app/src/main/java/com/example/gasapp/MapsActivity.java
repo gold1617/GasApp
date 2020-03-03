@@ -68,6 +68,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         gasStations = new ArrayList<GasStation>();
         geocoder = new Geocoder(this, Locale.getDefault());
+        stationLocatorList = new ArrayList<>();
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -338,8 +339,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(lastLocation == null)
             return;
 
+        for(StationLocator task:stationLocatorList)
+        {
+            if(task.getStatus().equals(AsyncTask.Status.RUNNING))
+                task.cancel(true);
+        }
+
         mMap.clear();
         gasStations.clear();
+        stationLocatorList.clear();
 
         try
         {
@@ -375,6 +383,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 String request = urlString + station.optString("name").replace(" ", "%20");
 
                 stationLocator = new StationLocator(stationLocationCallback);
+                stationLocatorList.add(stationLocator);
 
                 stationLocator.execute(request,station.optString("name"));
             }
