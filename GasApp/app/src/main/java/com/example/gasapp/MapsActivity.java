@@ -50,6 +50,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private WebRequestCallback stationLocationCallback;
     private StationLocator stationLocator;
     private ArrayList<GasStation> gasStations;
+    private ArrayList<LatLng> gasStationLocs;
     private Geocoder geocoder;
     private List<StationLocator> stationLocatorList;
 
@@ -67,6 +68,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //Obtain FusedLocationProviderClient
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         gasStations = new ArrayList<GasStation>();
+        gasStationLocs = new ArrayList<LatLng>();
         geocoder = new Geocoder(this, Locale.getDefault());
         stationLocatorList = new ArrayList<>();
 
@@ -139,6 +141,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 {
                                     GasStation station = new GasStation(name,loc,lastLocation);
                                     gasStations.add(station);
+                                    gasStationLocs.add(loc);
 
                                     //TODO: Add List View
                                     mMap.addMarker(new MarkerOptions().position(loc).title(name));
@@ -146,6 +149,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             }
                         }
                     }
+                    Log.d("DATA ADD",searchName + " Added");
                 }
             }
         };
@@ -177,14 +181,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private boolean isDuplicate(LatLng loc)
     {
-        for (GasStation g: gasStations)
-        {
-            if(loc.equals(g.getLocation()))
-            {
-                return true;
-            }
-        }
-        return false;
+        return gasStationLocs.contains(loc);
     }
 
     @Override
@@ -347,6 +344,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mMap.clear();
         gasStations.clear();
+        gasStationLocs.clear();
         stationLocatorList.clear();
 
         try
