@@ -1,13 +1,16 @@
 package com.example.gasapp;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -24,9 +27,11 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -57,7 +62,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static final int API_AVAILABILITY_REQUEST = 1;
     private static final int LOCATION_PERMISSION_REQUEST = 2;
 
-    //TODO: Change look of location and maps/navigate buttons
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -114,7 +118,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (response != null)
                 {
                     Iterator<String> iter = response.keys();
-                    String key,name,searchName;
+                    String key,name,searchName,address;
                     JSONArray jsonArray;
                     JSONObject jsonObject;
                     LatLng loc;
@@ -137,14 +141,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                                 loc = getImprovedLatLng(jsonObject);
 
+                                address = jsonObject.optString("address") + "," + jsonObject.optString("city") + ","
+                                        + jsonObject.optString("state");
+
                                 if(!isDuplicate(loc))
                                 {
-                                    GasStation station = new GasStation(name,loc,lastLocation);
+                                    if(jsonObject.optString("address") != "")
+                                        address = jsonObject.optString("address") + "," + jsonObject.optString("city") + ","
+                                                + jsonObject.optString("state");
+                                    else
+                                        address = null;
+                                    GasStation station = new GasStation(name,loc,lastLocation,address);
                                     gasStations.add(station);
                                     gasStationLocs.add(loc);
 
                                     //TODO: Add List View
-                                    mMap.addMarker(new MarkerOptions().position(loc).title(name));
+                                    mMap.addMarker(new MarkerOptions().position(loc).title(name)).setTag(station);
                                 }
                             }
                         }
@@ -255,7 +267,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
+        mMap.getUiSettings().setMyLocationButtonEnabled(false);
+        mMap.getUiSettings().setMapToolbarEnabled(false);
+
         mMap.setInfoWindowAdapter(new StationInfoWindowAdapter(getLayoutInflater()));
+
+        mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener()
+        {
+            @Override
+            public void onInfoWindowClick(Marker marker)
+            {
+                GasStation station = (GasStation)marker.getTag();
+                LatLng loc = station.getLocation();
+
+                String intentString = "";
+                if (station.getAddress() != null)
+                    intentString = String.format(getString(R.string.mapsIntent_Address), loc.latitude, loc.longitude, Uri.encode(station.getAddress()));
+                else
+                    intentString = String.format(getString(R.string.mapsIntent_LatLng), loc.latitude, loc.longitude);
+
+                // Create a Uri from an intent string. Use the result to create an Intent.
+                Uri gmmIntentUri = Uri.parse(intentString);
+
+                // Create an Intent from gmmIntentUri. Set the action to ACTION_VIEW
+                Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+                // Make the Intent explicit by setting the Google Maps package
+                mapIntent.setPackage("com.google.android.apps.maps");
+
+                // Attempt to start an activity that can handle the Intent
+                startActivity(mapIntent);
+            }
+        });
 
         updateLocationUI();
 
@@ -270,15 +312,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         try
         {
+            FloatingActionButton locateButton = findViewById(R.id.locateMeButton);
+            locateButton.setOnClickListener(new View.OnClickListener()
+            {
+                @Override
+                public void onClick(View v)
+                {
+                    updateLocation();
+                }
+            });
+
+
             if (hasLocationPermission)
             {
                 mMap.setMyLocationEnabled(true);
-                mMap.getUiSettings().setMyLocationButtonEnabled(true);
             }
             else
             {
                 mMap.setMyLocationEnabled(false);
-                mMap.getUiSettings().setMyLocationButtonEnabled(false);
                 lastLocation = null;
             }
         }

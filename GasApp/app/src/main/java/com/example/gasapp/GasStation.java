@@ -9,11 +9,13 @@ public class GasStation
     private LatLng location;
     private String name;
     private float distance = Float.POSITIVE_INFINITY;
+    private String address;
 
-    public GasStation(String stationName,LatLng stationLocation,Location currentLocation)
+    public GasStation(String stationName,LatLng stationLocation,Location currentLocation,String currentAddress)
     {
         name = stationName;
         location = stationLocation;
+        address = currentAddress;
         if(currentLocation != null && location != null)
         {
             float[] dist = new float[1];
@@ -32,5 +34,10 @@ public class GasStation
     public LatLng getLocation()
     {
         return location;
+    }
+
+    public String getAddress()
+    {
+        return address;
     }
 }

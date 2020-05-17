@@ -25,7 +25,6 @@ public class StationLocator extends AsyncTask<Object, Void, JSONObject>
 
         JSONObject response = new JSONObject();
 
-        //TODO: Speed up request process
         try
         {
             JSONObject singleResponse = URLHelper.simpleGet(request);
