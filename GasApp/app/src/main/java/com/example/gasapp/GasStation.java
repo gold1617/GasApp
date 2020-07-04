@@ -30,7 +30,6 @@ public class GasStation
         return name;
     }
 
-
     public LatLng getLocation()
     {
         return location;
@@ -40,4 +39,6 @@ public class GasStation
     {
         return address;
     }
+
+    public float getDistance() { return distance; }
 }
