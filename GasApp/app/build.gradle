@@ -5,7 +5,7 @@ android {
     useLibrary "org.apache.http.legacy"
     defaultConfig {
         applicationId "com.example.gasapp"
-        minSdkVersion 15
+        minSdkVersion 21
         targetSdkVersion 29
         versionCode 1
         versionName "1.0"
