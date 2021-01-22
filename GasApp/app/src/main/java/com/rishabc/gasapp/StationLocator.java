@@ -1,4 +1,4 @@
-package com.example.gasapp;
+package com.rishabc.gasapp;
 
 import android.os.AsyncTask;
 import android.util.Log;

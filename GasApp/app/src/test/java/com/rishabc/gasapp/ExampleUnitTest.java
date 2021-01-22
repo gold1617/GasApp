@@ -1,4 +1,4 @@
-package com.example.gasapp;
+package com.rishabc.gasapp;
 
 import org.junit.Test;
 
