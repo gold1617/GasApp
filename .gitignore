@@ -89,6 +89,8 @@ lint/tmp/
 
 
 #ID/keys
-*secret*
+secret_strings.xml
 google_maps_api_key.xml
 keystore.properties
+.gitsecret/keys/random_seed
+!*.secret
