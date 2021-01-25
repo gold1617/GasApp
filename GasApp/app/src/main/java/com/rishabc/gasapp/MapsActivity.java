@@ -123,45 +123,44 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     JSONObject jsonObject;
                     LatLng loc;
 
-                    key = iter.next();
-                    searchName = key.toLowerCase().contains("costco") ? "costco" : key.toLowerCase();
-                    jsonArray = response.optJSONArray(key);
+                    if (iter.hasNext()) {
+                        key = iter.next();
 
-                    if (jsonArray != null)
-                    {
-                        for (int i = 0; i < jsonArray.length(); i++)
-                        {
-                            jsonObject = jsonArray.optJSONObject(i);
-                            name = jsonObject.optString("name", "");
+                        searchName = key.toLowerCase().contains("costco") ? "costco" : key.toLowerCase();
+                        jsonArray = response.optJSONArray(key);
 
-                            //Filter closely named location returned by FourSquare Api
-                            if (name.toLowerCase().contains(searchName))
-                            {
-                                jsonObject = jsonObject.optJSONObject("location");
+                        if (jsonArray != null) {
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                jsonObject = jsonArray.optJSONObject(i);
+                                name = jsonObject.optString("name", "");
 
-                                loc = getImprovedLatLng(jsonObject);
+                                //Filter closely named location returned by FourSquare Api
+                                if (name.toLowerCase().contains(searchName)) {
+                                    jsonObject = jsonObject.optJSONObject("location");
 
-                                address = jsonObject.optString("address") + "," + jsonObject.optString("city") + ","
-                                        + jsonObject.optString("state");
+                                    loc = getImprovedLatLng(jsonObject);
 
-                                if(!isDuplicate(loc))
-                                {
-                                    if(jsonObject.optString("address") != "")
-                                        address = jsonObject.optString("address") + "," + jsonObject.optString("city") + ","
-                                                + jsonObject.optString("state");
-                                    else
-                                        address = null;
-                                    GasStation station = new GasStation(name,loc,lastLocation,address);
-                                    gasStations.add(station);
-                                    gasStationLocs.add(loc);
+                                    address = jsonObject.optString("address") + "," + jsonObject.optString("city") + ","
+                                            + jsonObject.optString("state");
 
-                                    //TODO: Add List View
-                                    mMap.addMarker(new MarkerOptions().position(loc).title(name)).setTag(station);
+                                    if (!isDuplicate(loc)) {
+                                        if (jsonObject.optString("address") != "")
+                                            address = jsonObject.optString("address") + "," + jsonObject.optString("city") + ","
+                                                    + jsonObject.optString("state");
+                                        else
+                                            address = null;
+                                        GasStation station = new GasStation(name, loc, lastLocation, address);
+                                        gasStations.add(station);
+                                        gasStationLocs.add(loc);
+
+                                        //TODO: Add List View
+                                        mMap.addMarker(new MarkerOptions().position(loc).title(name)).setTag(station);
+                                    }
                                 }
                             }
                         }
+                        Log.d("DATA ADD",searchName + " Added");
                     }
-                    Log.d("DATA ADD",searchName + " Added");
                 }
             }
         };

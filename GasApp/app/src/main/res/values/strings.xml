@@ -4,4 +4,5 @@
     <string name="nearby_url">https://api.foursquare.com/v2/venues/search?ll=%1$f,%2$f&amp;radius=8047&amp;intent=browse&amp;categoryId=4bf58dd8d48988d113951735&amp;client_id=%3$s&amp;client_secret=%4$s&amp;v=20180323&amp;query=</string>
     <string name="mapsIntent_LatLng">geo:0,0?q=%1$f,%2$f</string>
     <string name="mapsIntent_Address">geo:%1$f,%2$f?q=%3$s</string>
+    <string name="LocatingMsg">Locating nearby stations. Please wait.</string>
 </resources>
