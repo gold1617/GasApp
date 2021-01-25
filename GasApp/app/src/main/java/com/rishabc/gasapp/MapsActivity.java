@@ -11,6 +11,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -422,6 +423,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 getString(R.string.foursquare_client_secret));
 
         JSONObject station = null;
+
+        Toast.makeText(getApplicationContext(), getString(R.string.LocatingMsg), Toast.LENGTH_SHORT).show();
         for(int i =0;i < stationList.length();i++)
         {
             station = stationList.optJSONObject(i);
