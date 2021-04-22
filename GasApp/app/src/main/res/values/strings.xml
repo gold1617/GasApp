@@ -5,4 +5,5 @@
     <string name="mapsIntent_LatLng">geo:0,0?q=%1$f,%2$f</string>
     <string name="mapsIntent_Address">geo:%1$f,%2$f?q=%3$s</string>
     <string name="LocatingMsg">Locating nearby stations. Please wait.</string>
+    <string name="LocatedMsg">All nearby stations located.</string>
 </resources>

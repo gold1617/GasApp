@@ -9,12 +9,12 @@ import org.json.JSONObject;
 
 public class StationLocator extends AsyncTask<Object, Void, JSONObject>
 {
-    WebRequestCallback delegate = null;
+    private WebRequestCallback delegate = null;
+    private boolean isLast = false;
 
     public StationLocator(WebRequestCallback stationLocationCallback)
     {
         delegate = stationLocationCallback;
-
     }
 
     @Override
@@ -33,6 +33,7 @@ public class StationLocator extends AsyncTask<Object, Void, JSONObject>
             {
                 JSONArray temp = singleResponse.getJSONObject("response").getJSONArray("venues");
                 response.put(station, temp);
+                response.put("isLast",isLast);
                 Log.d("NETWORK",response.toString());
             }
         }
@@ -50,5 +51,10 @@ public class StationLocator extends AsyncTask<Object, Void, JSONObject>
     {
         if (delegate != null && !isCancelled())
             delegate.callBack(jsonObject);
+    }
+
+    public void setLast(boolean last)
+    {
+        isLast = last;
     }
 }

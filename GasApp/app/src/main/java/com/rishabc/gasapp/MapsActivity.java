@@ -118,33 +118,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             {
                 if (response != null)
                 {
+                    boolean isLast = (boolean) response.remove("isLast");
                     Iterator<String> iter = response.keys();
                     String key,name,searchName,address;
                     JSONArray jsonArray;
                     JSONObject jsonObject;
                     LatLng loc;
 
-                    if (iter.hasNext()) {
+                    if (iter.hasNext())
+                    {
                         key = iter.next();
 
                         searchName = key.toLowerCase().contains("costco") ? "costco" : key.toLowerCase();
                         jsonArray = response.optJSONArray(key);
 
-                        if (jsonArray != null) {
-                            for (int i = 0; i < jsonArray.length(); i++) {
+                        if (jsonArray != null)
+                        {
+                            for (int i = 0; i < jsonArray.length(); i++)
+                            {
                                 jsonObject = jsonArray.optJSONObject(i);
                                 name = jsonObject.optString("name", "");
 
                                 //Filter closely named location returned by FourSquare Api
-                                if (name.toLowerCase().contains(searchName)) {
+                                if (name.toLowerCase().contains(searchName))
+                                {
                                     jsonObject = jsonObject.optJSONObject("location");
 
                                     loc = getImprovedLatLng(jsonObject);
 
-                                    address = jsonObject.optString("address") + "," + jsonObject.optString("city") + ","
-                                            + jsonObject.optString("state");
-
-                                    if (!isDuplicate(loc)) {
+                                    if (!isDuplicate(loc))
+                                    {
                                         if (jsonObject.optString("address") != "")
                                             address = jsonObject.optString("address") + "," + jsonObject.optString("city") + ","
                                                     + jsonObject.optString("state");
@@ -162,6 +165,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         }
                         Log.d("DATA ADD",searchName + " Added");
                     }
+                    if(isLast)
+                        Toast.makeText(getApplicationContext(), getString(R.string.LocatedMsg), Toast.LENGTH_SHORT).show();
                 }
             }
         };
@@ -439,6 +444,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 stationLocator.execute(request,station.optString("name"));
             }
         }
+        stationLocatorList.get(stationLocatorList.size()-1).setLast(true);
 
     }
 }

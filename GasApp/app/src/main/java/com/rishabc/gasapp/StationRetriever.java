@@ -7,7 +7,7 @@ import org.json.JSONObject;
 public class StationRetriever extends AsyncTask<Object, Void, JSONObject>
 {
 
-    WebRequestCallback delegate = null;
+    private WebRequestCallback delegate = null;
 
     public StationRetriever(WebRequestCallback stationsCallback)
     {
