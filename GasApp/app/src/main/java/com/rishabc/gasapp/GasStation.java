@@ -1,10 +1,12 @@
 package com.rishabc.gasapp;
 
 import android.location.Location;
+import android.os.Parcel;
+import android.os.Parcelable;
 
 import com.google.android.gms.maps.model.LatLng;
 
-public class GasStation
+public class GasStation implements Parcelable
 {
     private LatLng location;
     private String name;
@@ -41,4 +43,38 @@ public class GasStation
     }
 
     public float getDistance() { return distance; }
+
+    public GasStation(Parcel in) {
+        location = in.readParcelable(LatLng.class.getClassLoader());
+        name = in.readString();
+        distance = in.readFloat();
+        address = in.readString();
+    }
+
+    @Override
+    public int describeContents()
+    {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags)
+    {
+        dest.writeParcelable(location,flags);
+        dest.writeString(name);
+        dest.writeFloat(distance);
+        dest.writeString(address);
+    }
+
+    public static final Creator<GasStation> CREATOR = new Creator<GasStation>() {
+        @Override
+        public GasStation createFromParcel(Parcel in) {
+            return new GasStation(in);
+        }
+
+        @Override
+        public GasStation[] newArray(int size) {
+            return new GasStation[size];
+        }
+    };
 }

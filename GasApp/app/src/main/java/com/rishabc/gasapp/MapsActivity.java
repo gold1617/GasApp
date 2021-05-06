@@ -55,7 +55,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private JSONArray stationList;
     private WebRequestCallback stationLocationCallback;
     private StationLocator stationLocator;
-    private ArrayList<GasStation> gasStations;
     private ArrayList<LatLng> gasStationLocs;
     private Geocoder geocoder;
     private List<StationLocator> stationLocatorList;
@@ -63,6 +62,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static final int API_AVAILABILITY_REQUEST = 1;
     private static final int LOCATION_PERMISSION_REQUEST = 2;
 
+    static ArrayList<GasStation> gasStations;
+    static StationListAdapter stationListAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -72,7 +73,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         //Obtain FusedLocationProviderClient
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        gasStations = new ArrayList<GasStation>();
+        if(gasStations == null || stationListAdapter == null)
+        {
+            gasStations = new ArrayList<GasStation>();
+            stationListAdapter = new StationListAdapter(getApplicationContext(),gasStations);
+        }
         gasStationLocs = new ArrayList<LatLng>();
         geocoder = new Geocoder(this, Locale.getDefault());
         stationLocatorList = new ArrayList<>();
@@ -82,6 +87,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
 
         mapFragment.getMapAsync(this);
+
+        FloatingActionButton listButton = findViewById(R.id.list_view_fab);
+        listButton.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                Intent intent = new Intent(v.getContext(),StationListActivity.class);
+                intent.putParcelableArrayListExtra("GasStations", gasStations);
+                startActivityForResult(intent,0);
+            }
+        });
 
         WebRequestCallback stationsListCallback = new WebRequestCallback()
         {
@@ -155,9 +172,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                             address = null;
                                         GasStation station = new GasStation(name, loc, lastLocation, address);
                                         gasStations.add(station);
+                                        stationListAdapter.notifyDataSetChanged();
                                         gasStationLocs.add(loc);
 
-                                        //TODO: Add List View
                                         mMap.addMarker(new MarkerOptions().position(loc).title(name)).setTag(station);
                                     }
                                 }
@@ -165,8 +182,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         }
                         Log.d("DATA ADD",searchName + " Added");
                     }
-                    if(isLast)
+                    if(isLast) {
                         Toast.makeText(getApplicationContext(), getString(R.string.LocatedMsg), Toast.LENGTH_SHORT).show();
+                     //   gasStations.sort();
+                    }
                 }
             }
         };
@@ -400,6 +419,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mMap.clear();
         gasStations.clear();
+        stationListAdapter.notifyDataSetChanged();
         gasStationLocs.clear();
         stationLocatorList.clear();
 

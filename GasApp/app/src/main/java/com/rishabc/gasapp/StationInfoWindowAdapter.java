@@ -30,12 +30,12 @@ public class StationInfoWindowAdapter implements GoogleMap.InfoWindowAdapter
 
         View view = layoutInflater.inflate(R.layout.station_marker_info,null);
 
-        TextView nameView = (TextView) view.findViewById(R.id.station_name);
+        TextView nameView = (TextView) view.findViewById(R.id.marker_station_name);
         nameView.setText(marker.getTitle());
 
         GasStation station = (GasStation) marker.getTag();
 
-        TextView distanceView = (TextView) view.findViewById(R.id.station_distance);
+        TextView distanceView = (TextView) view.findViewById(R.id.marker_station_distance);
         double dist = METER_TO_MILE * station.getDistance();
         String distString = String.format(" %.1fmi",dist);
         distanceView.setText(distString);

@@ -6,7 +6,7 @@
     android:layout_height="40dp">
 
     <TextView
-        android:id="@+id/station_name"
+        android:id="@+id/marker_station_name"
         android:layout_width="145dp"
         android:layout_height="20dp"
         android:layout_alignParentStart="true"
@@ -22,7 +22,7 @@
         android:id="@+id/imageView"
         android:layout_width="118dp"
         android:layout_height="18dp"
-        android:layout_below="@+id/station_name"
+        android:layout_below="@+id/marker_station_name"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
         android:layout_marginStart="1dp"
@@ -31,15 +31,15 @@
         android:src="@drawable/powered_by_foursquare_blue" />
 
     <TextView
-        android:id="@+id/station_distance"
+        android:id="@+id/marker_station_distance"
         android:layout_width="31dp"
         android:layout_height="20dp"
-        android:layout_alignTop="@+id/station_name"
+        android:layout_alignTop="@+id/marker_station_name"
         android:layout_marginStart="20dp"
         android:layout_marginLeft="20dp"
         android:layout_marginTop="-3dp"
-        android:layout_toEndOf="@+id/station_name"
-        android:layout_toRightOf="@+id/station_name"
+        android:layout_toEndOf="@+id/marker_station_name"
+        android:layout_toRightOf="@+id/marker_station_name"
         android:gravity="right"
         android:text="5mi"
         android:textSize="8sp"
