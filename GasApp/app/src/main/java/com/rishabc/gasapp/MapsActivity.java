@@ -197,21 +197,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private int getListPos(int left, int right, GasStation target)
     {
         if(right < left)
-            return 0;
-
-        if (left == right)
-        {
-            if(gasStations.get(left).getDistance() < target.getDistance())
-                return  left+1;
-            else
-                return left;
-        }
+            return left;
 
         int mid = (left+right)/2;
         if (gasStations.get(mid).getDistance() < target.getDistance())
             return getListPos(mid+1, right, target);
         else
-            return getListPos(left, mid,target);
+            return getListPos(left, mid-1,target);
     }
 
     private LatLng getImprovedLatLng(JSONObject jsonObject)
