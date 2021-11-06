@@ -142,6 +142,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     JSONObject jsonObject;
                     LatLng loc;
 
+                    int listpos = 0;
+
                     if (iter.hasNext())
                     {
                         key = iter.next();
@@ -171,7 +173,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                         else
                                             address = null;
                                         GasStation station = new GasStation(name, loc, lastLocation, address);
-                                        gasStations.add(station);
+                                        listpos = getListPos(0, gasStations.size()-1,station);
+                                        gasStations.add(listpos,station);
                                         stationListAdapter.notifyDataSetChanged();
                                         gasStationLocs.add(loc);
 
@@ -180,15 +183,35 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 }
                             }
                         }
-                        Log.d("DATA ADD",searchName + " Added");
+
                     }
                     if(isLast) {
                         Toast.makeText(getApplicationContext(), getString(R.string.LocatedMsg), Toast.LENGTH_SHORT).show();
-                     //   gasStations.sort();
+                        Log.v("DATA_ADD","All Stations added");
                     }
                 }
             }
         };
+    }
+
+    private int getListPos(int left, int right, GasStation target)
+    {
+        if(right < left)
+            return 0;
+
+        if (left == right)
+        {
+            if(gasStations.get(left).getDistance() < target.getDistance())
+                return  left+1;
+            else
+                return left;
+        }
+
+        int mid = (left+right)/2;
+        if (gasStations.get(mid).getDistance() < target.getDistance())
+            return getListPos(mid+1, right, target);
+        else
+            return getListPos(left, mid,target);
     }
 
     private LatLng getImprovedLatLng(JSONObject jsonObject)
