@@ -39,6 +39,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -471,7 +473,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             if (country.equalsIgnoreCase(station.optString("location")))
             {
-                String request = urlString + station.optString("name").replace(" ", "%20");
+                String request = null;
+                try
+                {
+                    request = urlString + URLEncoder.encode(station.optString("name"),"utf-8");
+                }
+                catch (UnsupportedEncodingException e)
+                {
+                    e.printStackTrace();
+                }
 
                 stationLocator = new StationLocator(stationLocationCallback);
                 stationLocatorList.add(stationLocator);
