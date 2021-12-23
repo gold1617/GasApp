@@ -60,6 +60,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private ArrayList<LatLng> gasStationLocs;
     private Geocoder geocoder;
     private List<StationLocator> stationLocatorList;
+    private FloatingActionButton listButton = null;
 
     private static final int API_AVAILABILITY_REQUEST = 1;
     private static final int LOCATION_PERMISSION_REQUEST = 2;
@@ -67,11 +68,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     static ArrayList<GasStation> gasStations;
     static StationListAdapter stationListAdapter;
 
+    private int requests_processed = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+
+        listButton = findViewById(R.id.list_view_fab);
 
         //Obtain FusedLocationProviderClient
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -90,7 +95,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mapFragment.getMapAsync(this);
 
-        FloatingActionButton listButton = findViewById(R.id.list_view_fab);
         listButton.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -130,6 +134,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         StationRetriever retriever = new StationRetriever(stationsListCallback);
         retriever.execute(new Object[]{getString(R.string.stations_url), getString(R.string.X_API_KEY)});
 
+
         stationLocationCallback = new WebRequestCallback()
         {
             @Override
@@ -137,7 +142,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             {
                 if (response != null)
                 {
-                    boolean isLast = (boolean) response.remove("isLast");
                     Iterator<String> iter = response.keys();
                     String key,name,searchName,address;
                     JSONArray jsonArray;
@@ -161,7 +165,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 name = jsonObject.optString("name", "");
 
                                 //Filter closely named location returned by FourSquare Api
-                                if (name.toLowerCase().contains(searchName))
+                                if (searchName.equals("brands") || name.toLowerCase().contains(searchName))
                                 {
                                     JSONObject locationObject = jsonObject.optJSONObject("location");
                                     JSONObject geocodeObject = jsonObject.optJSONObject("geocodes").optJSONObject("main");
@@ -186,12 +190,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 }
                             }
                         }
+                    }
+                }
+                requests_processed++;
 
-                    }
-                    if(isLast) {
-                        Toast.makeText(getApplicationContext(), getString(R.string.LocatedMsg), Toast.LENGTH_SHORT).show();
-                        Log.v("DATA_ADD","All Stations added");
-                    }
+                if (requests_processed == stationLocatorList.size())
+                {
+                    if (listButton != null)
+                        listButton.show();
+
+                    Toast.makeText(getApplicationContext(), getString(R.string.LocatedMsg), Toast.LENGTH_SHORT).show();
+                    Log.v("DATA_ADD","All Stations added");
                 }
             }
         };
@@ -430,7 +439,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         for(StationLocator task:stationLocatorList)
         {
-            if(task.getStatus().equals(AsyncTask.Status.RUNNING))
+            if(!task.getStatus().equals(AsyncTask.Status.FINISHED))
                 task.cancel(true);
         }
 
@@ -439,6 +448,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         stationListAdapter.notifyDataSetChanged();
         gasStationLocs.clear();
         stationLocatorList.clear();
+        requests_processed = 0;
+
+        if (listButton != null)
+            listButton.hide();
 
         try
         {
@@ -465,12 +478,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         JSONObject station = null;
 
         Toast.makeText(getApplicationContext(), getString(R.string.LocatingMsg), Toast.LENGTH_SHORT).show();
-        StringBuilder brandIdsBuilder = new StringBuilder();
+        StringBuilder brandUrlBuilder = new StringBuilder();
         String brandId = "";
 
         int total = 0;
         int noId = 0;
         String request = "";
+        Log.v("DATA_ADD", "Start station queries");
         for(int i =0;i < stationList.length();i++)
         {
             station = stationList.optJSONObject(i);
@@ -480,34 +494,41 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 brandId = station.optString("brand_id","");
                 if(!brandId.isEmpty())
                 {
-                    if(brandIdsBuilder.length() > 0)
-                        brandIdsBuilder.append(',');
+                    if(brandUrlBuilder.length() > 0)
+                        brandUrlBuilder.append(',');
 
-                    brandIdsBuilder.append(brandId);
+                    brandUrlBuilder.append(brandId);
                 }
                 else
                 {
                     noId++;
+
+                    try
+                    {
+                        request = urlString + URLEncoder.encode(station.optString("name"),"UTF-8");
+
+                        stationLocator = new StationLocator(stationLocationCallback);
+                        stationLocatorList.add(stationLocator);
+
+                        stationLocator.execute(request,station.optString("name"), getString(R.string.foursquare_api_key));
+                    }
+                    catch (UnsupportedEncodingException e)
+                    {
+                        e.printStackTrace();
+                    }
                 }
                 total++;
-
-                try {
-                    request = urlString + "query=" + URLEncoder.encode(station.optString("name"),"UTF-8");
-                } catch (UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                }
-                stationLocator = new StationLocator(stationLocationCallback);
-                stationLocatorList.add(stationLocator);
-
-                stationLocator.execute(request,station.optString("name"), getString(R.string.foursquare_api_key));
             }
         }
-        Log.v("BRANDS",brandIdsBuilder.toString());
         Log.v("BRANDS",noId + " brands out of " + total + " do not have an ID.");
-//            stationLocator = new StationLocator(stationLocationCallback);
-//            stationLocatorList.add(stationLocator);
-//
-//            stationLocator.execute(request,station.optString("name"));
-        stationLocatorList.get(stationLocatorList.size()-1).setLast(true);
+        stationLocator = new StationLocator(stationLocationCallback);
+        stationLocatorList.add(stationLocator);
+
+        urlString = String.format(getString(R.string.nearby_brands_url), lastLocation.getLatitude(),
+                lastLocation.getLongitude());
+
+        brandUrlBuilder.insert(0,urlString);
+
+        stationLocator.execute(brandUrlBuilder.toString(),"brands",getString(R.string.foursquare_api_key));
     }
 }

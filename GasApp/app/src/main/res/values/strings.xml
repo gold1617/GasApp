@@ -1,9 +1,10 @@
 <resources>
     <string name="app_name">GasApp</string>
     <string name="title_activity_maps">GasApp</string>
-    <string name="nearby_names_url">https://api.foursquare.com/v3/places/search?ll=%1$f,%2$f&amp;radius=8047&amp;categories=19007&amp;limit=50&amp;query=</string>
-    <string name="mapsIntent_LatLng">geo:0,0?q=%1$f,%2$f</string>
-    <string name="mapsIntent_Address">geo:%1$f,%2$f?q=%3$s</string>
+    <string name="nearby_names_url" translatable="false">https://api.foursquare.com/v3/places/search?ll=%1$f,%2$f&amp;radius=8047&amp;categories=19007&amp;limit=50&amp;query=</string>
+    <string name="nearby_brands_url" translatable="false">https://api.foursquare.com/v3/places/search?ll=%1$f,%2$f&amp;radius=8047&amp;categories=19007&amp;limit=50&amp;chains=</string>
+    <string name="mapsIntent_LatLng" translatable="false">geo:0,0?q=%1$f,%2$f</string>
+    <string name="mapsIntent_Address" translatable="false">geo:%1$f,%2$f?q=%3$s</string>
     <string name="LocatingMsg">Locating nearby stations. Please wait.</string>
     <string name="LocatedMsg">All nearby stations located.</string>
 </resources>

@@ -34,7 +34,6 @@ public class StationLocator extends AsyncTask<Object, Void, JSONObject>
             {
                 JSONArray temp = singleResponse.getJSONArray("results");
                 response.put(station, temp);
-                response.put("isLast",isLast);
                 Log.d("NETWORK",response.toString());
             }
         }
