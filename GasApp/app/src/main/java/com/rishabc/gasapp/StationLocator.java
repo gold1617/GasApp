@@ -22,16 +22,17 @@ public class StationLocator extends AsyncTask<Object, Void, JSONObject>
     {
         String request = (String) objects[0];
         String station = (String) objects[1];
+        String authorization = (String) objects[2];
 
         JSONObject response = new JSONObject();
 
         try
         {
-            JSONObject singleResponse = URLHelper.simpleGet(request);
+            JSONObject singleResponse = URLHelper.simpleGet(request,authorization);
 
             if (singleResponse != null)
             {
-                JSONArray temp = singleResponse.getJSONObject("response").getJSONArray("venues");
+                JSONArray temp = singleResponse.getJSONArray("results");
                 response.put(station, temp);
                 response.put("isLast",isLast);
                 Log.d("NETWORK",response.toString());

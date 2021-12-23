@@ -163,15 +163,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 //Filter closely named location returned by FourSquare Api
                                 if (name.toLowerCase().contains(searchName))
                                 {
-                                    jsonObject = jsonObject.optJSONObject("location");
+                                    JSONObject locationObject = jsonObject.optJSONObject("location");
+                                    JSONObject geocodeObject = jsonObject.optJSONObject("geocodes").optJSONObject("main");
 
-                                    loc = getImprovedLatLng(jsonObject);
+                                    loc = getImprovedLatLng(locationObject,geocodeObject);
 
                                     if (!isDuplicate(loc))
                                     {
-                                        if (jsonObject.optString("address") != "")
-                                            address = jsonObject.optString("address") + "," + jsonObject.optString("city") + ","
-                                                    + jsonObject.optString("state");
+                                        if (locationObject.optString("address") != "")
+                                            address = locationObject.optString("address") + "," + locationObject.optString("locality") + ","
+                                                    + locationObject.optString("region");
                                         else
                                             address = null;
                                         GasStation station = new GasStation(name, loc, lastLocation, address);
@@ -208,12 +209,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return getListPos(left, mid-1,target);
     }
 
-    private LatLng getImprovedLatLng(JSONObject jsonObject)
+    private LatLng getImprovedLatLng(JSONObject locationObject,JSONObject geocodeObject)
     {
-        if(jsonObject.optString("address") != "")
+        if(locationObject.optString("address") != "")
         {
-            String address = jsonObject.optString("address") + "," + jsonObject.optString("city") + ","
-                    + jsonObject.optString("state") + " " + jsonObject.optString("postalCode");
+            String address = locationObject.optString("address") + "," + locationObject.optString("locality") + ","
+                    + locationObject.optString("region") + " " + locationObject.optString("postcode");
 
             try
             {
@@ -229,7 +230,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         }
 
-        return new LatLng(jsonObject.optDouble("lat"), jsonObject.optDouble("lng"));
+        return new LatLng(geocodeObject.optDouble("latitude"), geocodeObject.optDouble("longitude"));
     }
 
     private boolean isDuplicate(LatLng loc)
@@ -422,8 +423,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private void locateNearbyStations()
-    {
+    private void locateNearbyStations() {
         String country = "";
         if(lastLocation == null)
             return;
@@ -459,37 +459,55 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(country.equalsIgnoreCase("United States"))
             country = "USA";
 
-        String urlString = String.format(getString(R.string.nearby_url), lastLocation.getLatitude(),
-                lastLocation.getLongitude(),
-                getString(R.string.foursquare_client_id),
-                getString(R.string.foursquare_client_secret));
+        String urlString = String.format(getString(R.string.nearby_names_url), lastLocation.getLatitude(),
+                lastLocation.getLongitude());
 
         JSONObject station = null;
 
         Toast.makeText(getApplicationContext(), getString(R.string.LocatingMsg), Toast.LENGTH_SHORT).show();
+        StringBuilder brandIdsBuilder = new StringBuilder();
+        String brandId = "";
+
+        int total = 0;
+        int noId = 0;
+        String request = "";
         for(int i =0;i < stationList.length();i++)
         {
             station = stationList.optJSONObject(i);
 
             if (country.equalsIgnoreCase(station.optString("location")))
             {
-                String request = null;
-                try
+                brandId = station.optString("brand_id","");
+                if(!brandId.isEmpty())
                 {
-                    request = urlString + URLEncoder.encode(station.optString("name"),"utf-8");
+                    if(brandIdsBuilder.length() > 0)
+                        brandIdsBuilder.append(',');
+
+                    brandIdsBuilder.append(brandId);
                 }
-                catch (UnsupportedEncodingException e)
+                else
                 {
+                    noId++;
+                }
+                total++;
+
+                try {
+                    request = urlString + "query=" + URLEncoder.encode(station.optString("name"),"UTF-8");
+                } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
-
                 stationLocator = new StationLocator(stationLocationCallback);
                 stationLocatorList.add(stationLocator);
 
-                stationLocator.execute(request,station.optString("name"));
+                stationLocator.execute(request,station.optString("name"), getString(R.string.foursquare_api_key));
             }
         }
+        Log.v("BRANDS",brandIdsBuilder.toString());
+        Log.v("BRANDS",noId + " brands out of " + total + " do not have an ID.");
+//            stationLocator = new StationLocator(stationLocationCallback);
+//            stationLocatorList.add(stationLocator);
+//
+//            stationLocator.execute(request,station.optString("name"));
         stationLocatorList.get(stationLocatorList.size()-1).setLast(true);
-
     }
 }

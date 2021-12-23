@@ -43,7 +43,6 @@ public class URLHelper
         {
             httpGet.addHeader("X-Api-Key", AuthKey);
 
-
             HttpResponse response = client.execute(httpGet, localContext);
             int status = response.getStatusLine().getStatusCode();
             Log.d("NETWORK", response.getStatusLine().getReasonPhrase());
@@ -73,7 +72,7 @@ public class URLHelper
         }
     }
 
-    public static JSONObject simpleGet(String url)
+    public static JSONObject simpleGet(String url, String authorization)
     {
         JSONObject JSONResponse = null;
 
@@ -87,8 +86,11 @@ public class URLHelper
 
         HttpClient client = new DefaultHttpClient();
         HttpGet httpGet = new HttpGet(url);
+
         try
         {
+            httpGet.addHeader("Authorization",authorization);
+
             HttpResponse response = client.execute(httpGet, localContext);
             int status = response.getStatusLine().getStatusCode();
             Log.d("NETWORK", response.getStatusLine().getReasonPhrase());
