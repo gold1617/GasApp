@@ -13,11 +13,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.FragmentActivity;
-
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -46,21 +41,25 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentActivity;
+
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 {
 
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationClient;
-    private GoogleApiAvailability googleApiAvailability;
     private Location lastLocation;
     private boolean hasLocationPermission = false;
     private JSONArray stationList;
     private WebRequestCallback stationLocationCallback;
-    private StationLocator stationLocator;
     private ArrayList<LatLng> gasStationLocs;
     private Geocoder geocoder;
     private List<StationLocator> stationLocatorList;
     private FloatingActionButton listButton = null;
+    private StationRetriever retriever;
 
     private static final int API_AVAILABILITY_REQUEST = 1;
     private static final int LOCATION_PERMISSION_REQUEST = 2;
@@ -106,35 +105,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        WebRequestCallback stationsListCallback = new WebRequestCallback()
-        {
-            @Override
-            public void callBack(JSONObject response)
-            {
-                if (response != null)
-                {
-                    try
-                    {
-                        stationList = response.getJSONArray("stations");
-                        Log.d("Stations", stationList.toString());
-                        locateNearbyStations();
-                    }
-                    catch (JSONException e)
-                    {
-                        Log.e("NETWORK", "Error in stationList Callback" + e.getMessage());
-                        e.printStackTrace();
-                    }
-                }
-                else
-                    stationList = null;
-
-            }
-        };
-
-        StationRetriever retriever = new StationRetriever(stationsListCallback);
-        retriever.execute(new Object[]{getString(R.string.stations_url), getString(R.string.X_API_KEY)});
-
-
         stationLocationCallback = new WebRequestCallback()
         {
             @Override
@@ -174,7 +144,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                                     if (!isDuplicate(loc))
                                     {
-                                        if (locationObject.optString("address") != "")
+                                        if (!locationObject.optString("address").equals(""))
                                             address = locationObject.optString("address") + "," + locationObject.optString("locality") + ","
                                                     + locationObject.optString("region");
                                         else
@@ -220,7 +190,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private LatLng getImprovedLatLng(JSONObject locationObject,JSONObject geocodeObject)
     {
-        if(locationObject.optString("address") != "")
+        if(locationObject.optString("address").equals(""))
         {
             String address = locationObject.optString("address") + "," + locationObject.optString("locality") + ","
                     + locationObject.optString("region") + " " + locationObject.optString("postcode");
@@ -252,7 +222,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     {
         super.onResume();
         //Make sure Google Play services is installed, enabled, and up to date
-        googleApiAvailability = GoogleApiAvailability.getInstance();
+        GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
         int apiAvailability = googleApiAvailability.isGooglePlayServicesAvailable(this);
 
         if (apiAvailability != ConnectionResult.SUCCESS)
@@ -411,11 +381,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             CameraPosition myPosition = new CameraPosition.Builder().target(myLoc).zoom(12).build();
                             mMap.animateCamera(CameraUpdateFactory.newCameraPosition(myPosition));
 
-                            Log.d("Stations","Location updated");
-                            if (stationList != null)
-                            {
-                                locateNearbyStations();
-                            }
+                            prepareToLocateStations();
+
                         }
                         else
                         {
@@ -432,10 +399,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private void locateNearbyStations() {
+    private void prepareToLocateStations()
+    {
         String country = "";
         if(lastLocation == null)
             return;
+
+        if(retriever != null && !retriever.getStatus().equals(AsyncTask.Status.FINISHED))
+            retriever.cancel(true);
 
         for(StationLocator task:stationLocatorList)
         {
@@ -472,6 +443,41 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(country.equalsIgnoreCase("United States"))
             country = "USA";
 
+        if(stationList != null && stationList.optJSONObject(0).optString("location","").equalsIgnoreCase(country))
+            locateNearbyStations();
+        else
+        {
+            retriever = new StationRetriever(new WebRequestCallback()
+            {
+                @Override
+                public void callBack(JSONObject response)
+                {
+                    if (response != null)
+                    {
+                        try
+                        {
+                            stationList = response.getJSONArray("stations");
+                            Log.d("Stations", stationList.toString());
+                            locateNearbyStations();
+                        }
+                        catch (JSONException e)
+                        {
+                            Log.e("NETWORK", "Error in stationList Callback" + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    }
+                    else
+                        stationList = null;
+                }
+            });
+
+            retriever.execute(new Object[]{getString(R.string.stations_url) + country, getString(R.string.X_API_KEY)});
+        }
+    }
+
+    private void locateNearbyStations()
+    {
+
         String urlString = String.format(getString(R.string.nearby_names_url), lastLocation.getLatitude(),
                 lastLocation.getLongitude());
 
@@ -481,46 +487,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         StringBuilder brandUrlBuilder = new StringBuilder();
         String brandId = "";
 
-        int total = 0;
-        int noId = 0;
         String request = "";
         Log.v("DATA_ADD", "Start station queries");
-        for(int i =0;i < stationList.length();i++)
+        StationLocator stationLocator;
+        for(int i = 0; i < stationList.length(); i++)
         {
             station = stationList.optJSONObject(i);
 
-            if (country.equalsIgnoreCase(station.optString("location")))
+            brandId = station.optString("brand_id","");
+            if(!brandId.isEmpty())
             {
-                brandId = station.optString("brand_id","");
-                if(!brandId.isEmpty())
+                if(brandUrlBuilder.length() > 0)
+                    brandUrlBuilder.append(',');
+
+                brandUrlBuilder.append(brandId);
+            }
+            else
+            {
+                try
                 {
-                    if(brandUrlBuilder.length() > 0)
-                        brandUrlBuilder.append(',');
+                    request = urlString + URLEncoder.encode(station.optString("name"),"UTF-8");
 
-                    brandUrlBuilder.append(brandId);
+                    stationLocator = new StationLocator(stationLocationCallback);
+                    stationLocatorList.add(stationLocator);
+
+                    stationLocator.execute(request,station.optString("name"), getString(R.string.foursquare_api_key));
                 }
-                else
+                catch (UnsupportedEncodingException e)
                 {
-                    noId++;
-
-                    try
-                    {
-                        request = urlString + URLEncoder.encode(station.optString("name"),"UTF-8");
-
-                        stationLocator = new StationLocator(stationLocationCallback);
-                        stationLocatorList.add(stationLocator);
-
-                        stationLocator.execute(request,station.optString("name"), getString(R.string.foursquare_api_key));
-                    }
-                    catch (UnsupportedEncodingException e)
-                    {
-                        e.printStackTrace();
-                    }
+                    e.printStackTrace();
                 }
-                total++;
             }
         }
-        Log.v("BRANDS",noId + " brands out of " + total + " do not have an ID.");
         stationLocator = new StationLocator(stationLocationCallback);
         stationLocatorList.add(stationLocator);
 
