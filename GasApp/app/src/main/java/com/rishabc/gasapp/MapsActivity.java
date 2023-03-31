@@ -485,48 +485,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         Toast.makeText(getApplicationContext(), getString(R.string.LocatingMsg), Toast.LENGTH_SHORT).show();
         StringBuilder brandUrlBuilder = new StringBuilder();
-        String brandId = "";
+        String stationName = "";
 
         String request = "";
         Log.v("DATA_ADD", "Start station queries");
         StationLocator stationLocator;
-        for(int i = 0; i < stationList.length(); i++)
-        {
+        for(int i = 0; i < stationList.length(); i++) {
             station = stationList.optJSONObject(i);
 
-            brandId = station.optString("brand_id","");
-            if(!brandId.isEmpty())
-            {
-                if(brandUrlBuilder.length() > 0)
-                    brandUrlBuilder.append(',');
+            stationName = station.optString("name", "");
+            if (stationName.equals("FSQ_ID_QUERY")) {
+                stationLocator = new StationLocator(stationLocationCallback);
+                stationLocatorList.add(stationLocator);
 
-                brandUrlBuilder.append(brandId);
-            }
-            else
-            {
-                try
-                {
-                    request = urlString + URLEncoder.encode(station.optString("name"),"UTF-8");
+                urlString = String.format(getString(R.string.nearby_brands_url), lastLocation.getLatitude(),
+                        lastLocation.getLongitude());
+
+                brandUrlBuilder.insert(0,urlString);
+                brandUrlBuilder.append(station.optString("query"));
+
+                stationLocator.execute(brandUrlBuilder.toString(),"brands",getString(R.string.foursquare_api_key));
+            } else {
+                try {
+                    request = urlString + URLEncoder.encode(stationName, "UTF-8");
 
                     stationLocator = new StationLocator(stationLocationCallback);
                     stationLocatorList.add(stationLocator);
 
-                    stationLocator.execute(request,station.optString("name"), getString(R.string.foursquare_api_key));
-                }
-                catch (UnsupportedEncodingException e)
-                {
+                    stationLocator.execute(request, stationName, getString(R.string.foursquare_api_key));
+                } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
             }
         }
-        stationLocator = new StationLocator(stationLocationCallback);
-        stationLocatorList.add(stationLocator);
-
-        urlString = String.format(getString(R.string.nearby_brands_url), lastLocation.getLatitude(),
-                lastLocation.getLongitude());
-
-        brandUrlBuilder.insert(0,urlString);
-
-        stationLocator.execute(brandUrlBuilder.toString(),"brands",getString(R.string.foursquare_api_key));
     }
 }
